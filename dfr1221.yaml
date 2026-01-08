@@ -1,9 +1,15 @@
+# this is sample esphome yaml code for Home Assistant  
+# forked from project https://github.com/marcinmajkowski44-ship-it/ESP32S3-1.8-inch-JC3636K518C
+# Thanks MArcin for idea
+# I changed GPIO pins to work with DFrobot DFR1221 V2 board ( Guiton ) JC3636K518 
+# there are na buttons on this board so I removed deep sleep functionality
+
 substitutions:
   name: "dfr1221"
   friendly_name: "DFRobot-round"
   device_description: "ESP32S3-1.8-inch JC3636K518C"
-  project_name: "dfr1221 Project Jan 2026"
-  project_version: "1.1.1"
+  project_name: "DFRobot.dfr1221"
+  project_version: "1.1.2"
 
 esphome:
   name: "${name}"
@@ -56,16 +62,16 @@ i2c:
   scl: 8
   id: touchscreen_bus
 
-# Deep sleep configuration - wakes up on encoder rotation
-deep_sleep:
-  id: deep_sleep_control
-  esp32_ext1_wakeup:
-    mode: ANY_LOW
-    pins:
-      - number: GPIO20
-        allow_other_uses: true
-      - number: GPIO21
-        allow_other_uses: true
+# Deep sleep configuration - wakes up on ... i must find proper pins on DFR1221 V2 board
+#deep_sleep:
+#  id: deep_sleep_control
+#  esp32_ext1_wakeup:
+#    mode: ANY_LOW
+#    pins:
+#      - number: GPIO20
+#        allow_other_uses: true
+#      - number: GPIO21
+#        allow_other_uses: true
 
 globals:
   - id: current_page
@@ -492,108 +498,6 @@ script:
             - lambda: 'id(led_update_pending) = false;'
 
 
-binary_sensor:
-  - platform: gpio
-    id: encoder_pin_a
-    pin:
-      number: GPIO20
-      mode: INPUT_PULLUP
-      allow_other_uses: true
-    on_press:
-      - if:
-          condition:
-            lambda: 'return id(current_page) == 1;'
-          then:
-            # Page 1 - LED Brightness - Update local value and trigger delayed send
-            - lambda: |-
-                int current_brightness = id(led_update_pending) ? id(pending_led_brightness) : (int)id(ha_led_brightness).state;
-                int new_brightness = current_brightness - 5;
-                if (new_brightness < 0) new_brightness = 0;
-                id(pending_led_brightness) = new_brightness;
-                id(led_update_pending) = true;
-            - lvgl.label.update:
-                id: brightness_label
-                text: !lambda |-
-                  static char buf[8];
-                  snprintf(buf, sizeof(buf), "%d%%", id(pending_led_brightness));
-                  return buf;
-            - script.execute: update_led_brightness
-      - if:
-          condition:
-            lambda: 'return id(current_page) == 2;'
-          then:
-            # Page 2 - Cover Position - Update local value and trigger delayed send
-            - lambda: |-
-                int current_pos = id(cover_update_pending) ? id(pending_cover_position) : (int)id(ha_zaslona_procent).state;
-                int new_pos = current_pos - 10;
-                if (new_pos < 0) new_pos = 0;
-                id(pending_cover_position) = new_pos;
-                id(cover_update_pending) = true;
-            - lvgl.label.update:
-                id: zaslona_value
-                text: !lambda |-
-                  static char buf[8];
-                  snprintf(buf, sizeof(buf), "%d%%", id(pending_cover_position));
-                  return buf;
-            - script.execute: update_cover_position
-      - if:
-          condition: lvgl.is_paused
-          then:
-            - logger.log: "LVGL resuming from encoder"
-            - lvgl.resume:
-            - lvgl.widget.redraw:
-            - light.turn_on: display_backlight
-
-  - platform: gpio
-    id: encoder_pin_b
-    pin:
-      number: GPIO21
-      mode: INPUT_PULLUP
-      allow_other_uses: true
-    on_press:
-      - if:
-          condition:
-            lambda: 'return id(current_page) == 1;'
-          then:
-            # Page 1 - LED Brightness - Update local value and trigger delayed send
-            - lambda: |-
-                int current_brightness = id(led_update_pending) ? id(pending_led_brightness) : (int)id(ha_led_brightness).state;
-                int new_brightness = current_brightness + 5;
-                if (new_brightness > 100) new_brightness = 100;
-                id(pending_led_brightness) = new_brightness;
-                id(led_update_pending) = true;
-            - lvgl.label.update:
-                id: brightness_label
-                text: !lambda |-
-                  static char buf[8];
-                  snprintf(buf, sizeof(buf), "%d%%", id(pending_led_brightness));
-                  return buf;
-            - script.execute: update_led_brightness
-      - if:
-          condition:
-            lambda: 'return id(current_page) == 2;'
-          then:
-            # Page 2 - Cover Position - Update local value and trigger delayed send
-            - lambda: |-
-                int current_pos = id(cover_update_pending) ? id(pending_cover_position) : (int)id(ha_zaslona_procent).state;
-                int new_pos = current_pos + 10;
-                if (new_pos > 100) new_pos = 100;
-                id(pending_cover_position) = new_pos;
-                id(cover_update_pending) = true;
-            - lvgl.label.update:
-                id: zaslona_value
-                text: !lambda |-
-                  static char buf[8];
-                  snprintf(buf, sizeof(buf), "%d%%", id(pending_cover_position));
-                  return buf;
-            - script.execute: update_cover_position
-      - if:
-          condition: lvgl.is_paused
-          then:
-            - logger.log: "LVGL resuming from encoder"
-            - lvgl.resume:
-            - lvgl.widget.redraw:
-            - light.turn_on: display_backlight
 
 number:    
   - platform: template
@@ -611,7 +515,7 @@ lvgl:
     timeout: 30s
     then:
       - logger.log: "LVGL is idle - preparing for deep sleep"
-#      - light.turn_off: display_backlight
+      - light.turn_off: display_backlight
       - lvgl.pause:
       - delay: 1800s
       - logger.log: "Entering deep sleep"
