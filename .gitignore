@@ -3,8 +3,9 @@ dfr1221 copy ver 002.yaml
 /.esphome
 dfr1221 copy ver ok 001.yaml
 dfr1221 copy ver ok 002.yaml
-secrects.yaml
 dfrobot demo/pincfg.h
 dfrobot demo/scr_st77916.h
+/dfrobot demo
 log -001
 secrets.yaml
+secret.yaml
